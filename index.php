@@ -374,7 +374,7 @@ if (isset($update->message)) {
     if ($text == '/start' || $text == "🔙 Bosh menyu") {
         bot('sendMessage', [
             'chat_id' => $chat_id,
-            'text' => "👋 **Assalomu alaykum!**\n\nMen Telegramdagi firibgarlarni aniqlovchi botman.\n\n👇 **Nimani tekshiramiz?** Menyudan tanlang yoki shubhali ID/Username ni yozib yuboring.",
+            'text' => "Nimani tekshiramiz? Menyudan tanlang yoki shubhali ID/Username ni yozib yuboring.",
             'reply_markup' => json_encode([
                 'keyboard' => [
                     [['text' => "🛡 Scam Botlar"], ['text' => "👤 Scam Adminlar"]],
