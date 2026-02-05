@@ -11,38 +11,49 @@ if (!$bot_token) {
 }
 
 // ====================================================================
-// DATABASE CONNECTION (SQLITE)
+// DATABASE CONNECTION (MYSQL)
 // ====================================================================
-$db_file = __DIR__ . '/scambase.db';
-$pdo = new PDO('sqlite:' . $db_file);
-$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+// Render-dagi Environment Variables-dan olinadi
+$db_host = getenv('DB_HOST'); // Masalan: mysql-1234.aivencloud.com
+$db_port = getenv('DB_PORT'); // Masalan: 3306
+$db_name = getenv('DB_NAME'); // Masalan: defaultdb
+$db_user = getenv('DB_USER'); // Masalan: avnadmin
+$db_pass = getenv('DB_PASS'); // Parol
 
-// 1. Scamlar jadvali
-$pdo->exec("CREATE TABLE IF NOT EXISTS scams (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    target_id TEXT,
-    username TEXT,
-    type TEXT,
-    reason TEXT,
-    photo_id TEXT,
-    audio_id TEXT,
-    added_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)");
+try {
+    $dsn = "mysql:host=$db_host;port=$db_port;dbname=$db_name;charset=utf8mb4";
+    $pdo = new PDO($dsn, $db_user, $db_pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // Jadvallar (MySQL sintaksisiga moslangan)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS scams (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        target_id VARCHAR(100),
+        username VARCHAR(100),
+        type VARCHAR(50),
+        reason TEXT,
+        photo_id TEXT,
+        audio_id TEXT,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+    
+    $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+        chat_id BIGINT PRIMARY KEY,
+        fullname VARCHAR(255),
+        username VARCHAR(255),
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 
-// 2. Foydalanuvchilar jadvali
-$pdo->exec("CREATE TABLE IF NOT EXISTS users (
-    chat_id INTEGER PRIMARY KEY,
-    fullname TEXT,
-    username TEXT,
-    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS admin_states (
+        user_id BIGINT PRIMARY KEY,
+        state VARCHAR(50),
+        data TEXT
+    )");
 
-// 3. Admin holati (State) jadvali
-$pdo->exec("CREATE TABLE IF NOT EXISTS admin_states (
-    user_id INTEGER PRIMARY KEY,
-    state TEXT,
-    data TEXT
-)");
+} catch (PDOException $e) {
+    error_log("Baza bilan xatolik: " . $e->getMessage());
+    die("Baza bilan bog'lanishda xatolik yuz berdi.");
+}
 
 // ====================================================================
 // TELEGRAM API FUNKSIYALARI
