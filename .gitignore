@@ -1,0 +1,5 @@
+# SQLite bazasi (lokal dagi ma'lumotlar GitHubga chiqmasligi uchun)
+*.db
+
+# Docker va vaqtinchalik fayllar
+.DS_Store
