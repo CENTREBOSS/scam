@@ -434,7 +434,7 @@ if (isset($update->message)) {
         $caption .= "🆔 **ID:** `" . ($result['target_id'] ?? 'Noma\'lum') . "`\n";
         $caption .= "📛 **Username:** @" . ($result['username'] ?? 'Mavjud emas') . "\n";
         $caption .= "📝 **Sabab:** \n" . $result['reason'] . "\n\n";
-        $caption .= "⛔️ __Ushbu foydalanuvchi bilan har qanday savdoni to'xtating!__";
+        $caption .= "⛔️ __Luminex Verify__";
 
         // Rasm bormi?
         if ($result['photo_id']) {
@@ -457,7 +457,7 @@ if (isset($update->message)) {
             bot('sendVoice', [
                 'chat_id' => $chat_id,
                 'voice' => $result['audio_id'],
-                'caption' => "🎙 Qo'shimcha audio isbot"
+                'caption' => "🎙 audio "
             ]);
         }
 
@@ -467,7 +467,7 @@ if (isset($update->message)) {
         // 1. Userga javob
         bot('sendMessage', [
             'chat_id' => $chat_id,
-            'text' => "✅ **Bazada topilmadi.**\n\nUshbu ID/Username bizning qora ro'yxatda yo'q.\n\n🧐 _Lekin xavfsizlik uchun, so'rovingiz adminga tekshirish uchun yuborildi._",
+            'text' => "✅ **Bazada topilmadi.**\n\nUshbu ID/Username bizning qora ro'yxatda yo'q.\n\n🧐 _Lekin xavfsizlik uchun, so'rovingiz jamoaga tekshirish uchun yuborildi._",
             'parse_mode' => 'Markdown'
         ]);
 
