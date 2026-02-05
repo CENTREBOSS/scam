@@ -73,13 +73,15 @@ function bot($method, $datas = []) {
     return json_decode($res);
 }
 
-// ====================================================================
-// STATE (HOLAT) BOSHQARUVI
-// ====================================================================
+// ESKI HOLATI (Xatoli):
+// $stmt = $pdo->prepare("INSERT OR REPLACE INTO admin_states (user_id, state, data) VALUES (:uid, :st, :dt)");
+
+// YANGI HOLATI (To'g'risi):
 function updateState($user_id, $state, $data = []) {
     global $pdo;
     $json_data = json_encode($data);
-    $stmt = $pdo->prepare("INSERT OR REPLACE INTO admin_states (user_id, state, data) VALUES (:uid, :st, :dt)");
+    // MySQL uchun REPLACE INTO ishlatamiz
+    $stmt = $pdo->prepare("REPLACE INTO admin_states (user_id, state, data) VALUES (:uid, :st, :dt)");
     $stmt->execute([':uid' => $user_id, ':st' => $state, ':dt' => $json_data]);
 }
 
