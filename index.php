@@ -107,6 +107,34 @@ function clearState($user_id) {
 // ====================================================================
 $update = json_decode(file_get_contents('php://input'));
 
+if (isset($update->callback_query)) {
+    $callback_query = $update->callback_query;
+    $callback_data = $callback_query->data;
+    $callback_user_id = $callback_query->from->id;
+    $callback_id = $callback_query->id;
+    $msg_id = $callback_query->message->message_id;
+
+    if ($callback_user_id == $admin_id && strpos($callback_data, 'delete_') === 0) {
+        $scam_id = str_replace('delete_', '', $callback_data);
+        
+        $stmt = $pdo->prepare("DELETE FROM scams WHERE id = :id");
+        $stmt->execute([':id' => $scam_id]);
+        
+        bot('answerCallbackQuery', [
+            'callback_query_id' => $callback_id,
+            'text' => "❌ O'chirildi!",
+            'show_alert' => false
+        ]);
+        
+        bot('editMessageCaption', [
+            'chat_id' => $callback_user_id,
+            'message_id' => $msg_id,
+            'caption' => "🗑 Bu scam ma'lumoti bazadan o'chirildi.",
+        ]);
+    }
+    exit;
+}
+
 if (isset($update->message)) {
     $message = $update->message;
     $chat_id = $message->chat->id;
@@ -161,24 +189,24 @@ if (isset($update->message)) {
             exit;
         }
 
-        // Admin panelga kirish
-        if ($text == '/admin') {
-            clearState($user_id);
-            bot('sendMessage', [
-                'chat_id' => $chat_id,
-                'text' => "😎 **Admin Panelga Xush kelibsiz!**\n\nKerakli bo'limni tanlang:",
-                'parse_mode' => 'Markdown',
-                'reply_markup' => json_encode([
-                    'keyboard' => [
-                        [['text' => "➕ Scam Qo'shish"], ['text' => "📢 Xabar tarqatish"]],
-                        [['text' => "📊 Statistika"], ['text' => "/start"]]
-                    ],
-                    'resize_keyboard' => true
-                ])
-            ]);
-            exit;
-        }
-
+      // Admin panelga kirish
+if ($text == '/admin') {
+    clearState($user_id);
+    bot('sendMessage', [
+        'chat_id' => $chat_id,
+        'text' => "😎 **Admin Panelga Xush kelibsiz!**\n\nKerakli bo'limni tanlang:",
+        'parse_mode' => 'Markdown',
+        'reply_markup' => json_encode([
+            'keyboard' => [
+                [['text' => "➕ Scam Qo'shish"], ['text' => "🗑 Scam O'chirish"]], // Yangi tugma qo'shildi
+                [['text' => "📢 Xabar tarqatish"], ['text' => "📊 Statistika"]],
+                [['text' => "/start"]]
+            ],
+            'resize_keyboard' => true
+        ])
+    ]);
+    exit;
+}
         // [SCAM QO'SHISH] - 1-qadam: Turni tanlash
         if ($text == "➕ Scam Qo'shish") {
             updateState($user_id, 'step_1_type');
@@ -367,6 +395,41 @@ if (isset($update->message)) {
         }
     }
 
+    // [SCAM O'CHIRISH] - 1-qadam
+if ($text == "🗑 Scam O'chirish") {
+    updateState($user_id, 'del_scam_step');
+    bot('sendMessage', [
+        'chat_id' => $chat_id,
+        'text' => "🗑 **O'chirmoqchi bo'lgan scammerning ID yoki Username-ni yozing:**",
+        'reply_markup' => json_encode(['keyboard' => [[['text' => '❌ Bekor qilish']]], 'resize_keyboard' => true])
+    ]);
+    exit;
+}
+
+// [SCAM O'CHIRISH] - 2-qadam (Bajarish)
+if ($state == 'del_scam_step') {
+    $target = str_replace(['@', ' '], '', $text);
+    
+    // Bazadan bor-yo'qligini tekshirish
+    $stmt = $pdo->prepare("DELETE FROM scams WHERE username = :inp OR target_id = :inp");
+    $stmt->execute([':inp' => $target]);
+    
+    if ($stmt->rowCount() > 0) {
+        $msg = "✅ **Muvaffaqiyatli o'chirildi!**\n\n`$target` bazadan olib tashlandi.";
+    } else {
+        $msg = "⚠️ **Xatolik:** Bunday ma'lumot topilmadi yoki allaqachon o'chirilgan.";
+    }
+    
+    bot('sendMessage', [
+        'chat_id' => $chat_id,
+        'text' => $msg,
+        'parse_mode' => 'Markdown',
+        'reply_markup' => json_encode(['keyboard' => [[['text' => '/admin']]], 'resize_keyboard' => true])
+    ]);
+    clearState($user_id);
+    exit;
+}
+
     // ----------------------------------------------------------------
     // 3. ODDIY FOYDALANUVCHI (USER) LOGIKASI
     // ----------------------------------------------------------------
@@ -435,6 +498,34 @@ if (isset($update->message)) {
         $caption .= "📛 **Username:** @" . ($result['username'] ?? 'Mavjud emas') . "\n";
         $caption .= "📝 **Sabab:** \n" . $result['reason'] . "\n\n";
         $caption .= "⛔️ __Luminex Verify__";
+
+        // Agar qidirgan odam admin bo'lsa, o'chirish tugmasini ko'rsatamiz
+$inline_keyboard = null;
+if ($is_admin) {
+    $inline_keyboard = json_encode([
+        'inline_keyboard' => [
+            [['text' => "🗑 Bazadan o'chirish", 'callback_data' => "delete_" . $result['id']]]
+        ]
+    ]);
+}
+
+// Rasm yuborish qismini shunga moslang:
+if ($result['photo_id']) {
+    bot('sendPhoto', [
+        'chat_id' => $chat_id,
+        'photo' => $result['photo_id'],
+        'caption' => $caption,
+        'parse_mode' => 'Markdown',
+        'reply_markup' => $inline_keyboard // Tugma qo'shildi
+    ]);
+} else {
+    bot('sendMessage', [
+        'chat_id' => $chat_id,
+        'text' => $caption,
+        'parse_mode' => 'Markdown',
+        'reply_markup' => $inline_keyboard // Tugma qo'shildi
+    ]);
+}
 
         // Rasm bormi?
         if ($result['photo_id']) {
